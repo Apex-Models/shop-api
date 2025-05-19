@@ -1,0 +1,23 @@
+# Dependency directories
+node_modules/
+.prisma/
+
+# Optional npm cache directory
+.npm
+
+# vscode
+.vscode
+*.code-workspace
+
+# build
+dist
+
+# lock files
+yarn.lock
+
+# env
+.env
+.env.local
+
+# OS
+.DS_Store
