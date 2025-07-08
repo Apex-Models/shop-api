@@ -24,9 +24,9 @@ model Product {
   price           Float
   imageUrl        String[]
   ObjectModelData String?
-  stock           Int
   type            String
   category        String[]
+  stripeProductId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
