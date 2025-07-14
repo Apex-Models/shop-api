@@ -1,33 +1,37 @@
-const fastify = require('fastify')({ logger: true });
-const cors = require('@fastify/cors');
-const { PrismaClient } = require('@prisma/client');
-const apiRouter = require('./routes');
-require('dotenv').config();
+const isDev = process.env.NODE_ENV !== 'production';
 
-// Prisma
-const prisma = new PrismaClient();
+const fastify = require('fastify')({
+  logger: isDev ? true : { level: 'warn' },
+  trustProxy: !isDev,
+});
+const cors = require('@fastify/cors');
+const routes = require('./routes');
+require('dotenv').config();
 
 // CORS
 fastify.register(cors, {
-  origin: (origin, cb) => {
-    if (!origin || origin.includes('.vercel.app') || origin === 'http://localhost:3000') {
+  origin: (origin: string | undefined, cb: (error: Error | null, success: boolean) => void) => {
+    if (!origin || origin === `${process.env.CORS_ORIGIN}`) {
       cb(null, true);
     } else {
-      cb(new Error('Not allowed by CORS'));
+      cb(new Error('Not allowed by CORS'), false);
     }
   },
-  allowMethods: 'GET,PUT,POST',
+  allowMethods: 'GET,PUT,POST,DELETE',
   credentials: true,
 });
 
 // app routes
-fastify.register(apiRouter, { prefix: 'api/' });
+fastify.register(routes, { prefix: 'api/' });
 
 // Run the server
-fastify.listen({ port: process.env.PORT || 4000, host: '0.0.0.0' }, (error, address) => {
-  if (error) {
-    fastify.log.error(error);
-    process.exit(1);
+fastify.listen(
+  { port: process.env.PORT || 4000, host: '0.0.0.0' },
+  (error: Error | null, address: string) => {
+    if (error) {
+      fastify.log.error(error);
+      process.exit(1);
+    }
+    fastify.log.info(`server listening on ${address}`);
   }
-  fastify.log.info(`server listening on ${address}`);
-});
+);

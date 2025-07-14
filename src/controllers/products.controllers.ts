@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const axios = require('axios');
 const prisma = new PrismaClient();
 
-exports.createProduct = async function (request, reply) {
+exports.createProduct = async function (request: any, reply: any) {
   try {
     console.log('🚀 Début création produit:', request.body);
     const { name, description, price, imageUrl, ObjectModelData, type, category } = request.body;
@@ -49,7 +49,7 @@ exports.createProduct = async function (request, reply) {
         console.error('❌ Erreur lors de la création du produit Stripe:', stripeData.error);
         // On continue même si Stripe échoue, mais on log l'erreur
       }
-    } catch (stripeError) {
+    } catch (stripeError: any) {
       console.error("❌ Erreur lors de l'appel à l'API payment:", {
         message: stripeError.message,
         code: stripeError.code,
@@ -83,7 +83,7 @@ exports.createProduct = async function (request, reply) {
         stripeIntegration: stripeProductId ? 'success' : 'failed',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Erreur complète:', {
       message: error.message,
       stack: error.stack,
@@ -98,7 +98,7 @@ exports.createProduct = async function (request, reply) {
   }
 };
 
-exports.getAllProducts = async function (request, reply) {
+exports.getAllProducts = async function (_request: any, reply: any) {
   try {
     const products = await prisma.product.findMany();
     reply.status(200).send({
@@ -106,7 +106,7 @@ exports.getAllProducts = async function (request, reply) {
       message: 'Products retrieved successfully',
       data: products,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     reply.status(400).send({
       success: false,
@@ -116,7 +116,7 @@ exports.getAllProducts = async function (request, reply) {
   }
 };
 
-exports.getProductsWithFilters = async function (request, reply) {
+exports.getProductsWithFilters = async function (request: any, reply: any) {
   try {
     const { page = 1, sortBy = 'createdAt', sortOrder = 'desc', filters = {} } = request.body;
 
@@ -197,7 +197,7 @@ exports.getProductsWithFilters = async function (request, reply) {
         sortOrder,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     reply.status(400).send({
       success: false,
@@ -207,7 +207,7 @@ exports.getProductsWithFilters = async function (request, reply) {
   }
 };
 
-exports.getProductById = async function (request, reply) {
+exports.getProductById = async function (request: any, reply: any) {
   try {
     const { id } = request.query;
 
@@ -228,7 +228,7 @@ exports.getProductById = async function (request, reply) {
       message: 'Product retrieved successfully',
       data: product,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     reply.status(400).send({
       success: false,

@@ -1,3 +1,18 @@
 #!/bin/sh
-npm run lint:check
-npm run format:check 
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🚀 Pre-push: Vérifications complètes..."
+
+echo "📝 1/4 - Vérification du formatage..."
+npm run format || exit 1
+
+echo "🔍 2/4 - Linting complet..."
+npm run lint || exit 1
+
+echo "🔧 3/4 - Vérification TypeScript..."
+npm run typecheck || exit 1
+
+echo "🏗️ 4/4 - Test de build..."
+npm run build || exit 1
+
+echo "✅ Toutes les vérifications passées! Push autorisé." 

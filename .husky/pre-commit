@@ -1,1 +1,5 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Pre-commit: Vérification des fichiers modifiés..."
 npm run lint-staged

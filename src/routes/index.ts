@@ -1,9 +1,9 @@
-const productsRoutes = require('./products.routes');
+const productRouterModule = require('./products.routes');
 
-async function apiRouter(fastify, _options) {
-  fastify.register(productsRoutes, { prefix: '/product' });
+async function apiRouter(fastify: any, _options: any) {
+  fastify.register(productRouterModule, { prefix: '/product' });
 
-  fastify.get('/', (request, reply) => {
+  fastify.get('/', (_request: any, reply: any) => {
     reply.send({ hello: 'Welcome to Nos Truffes API !' });
   });
 }

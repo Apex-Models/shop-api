@@ -1,0 +1,29 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Récupération du message de commit
+commit_message=$(cat "$1")
+
+echo "📝 Validation du message de commit..."
+
+# Vérifier que le message n'est pas vide
+if [ -z "$commit_message" ]; then
+    echo "❌ Le message de commit ne peut pas être vide"
+    exit 1
+fi
+
+# Vérifier la longueur minimale (au moins 10 caractères)
+if [ ${#commit_message} -lt 10 ]; then
+    echo "❌ Le message de commit doit faire au moins 10 caractères"
+    echo "Message actuel: '$commit_message' (${#commit_message} caractères)"
+    exit 1
+fi
+
+# Suggestions pour de bons messages (optionnel, avertissement seulement)
+if ! echo "$commit_message" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf)(\(.+\))?: .+"; then
+    echo "💡 Suggestion: Utilisez le format 'type: description'"
+    echo "   Exemples: feat: add user login, fix: resolve CORS issue"
+    echo "   Types: feat, fix, docs, style, refactor, test, chore, perf"
+fi
+
+echo "✅ Message de commit valide: $commit_message" 
