@@ -1,2 +1,2 @@
-echo "🔍 Pre-commit: Vérification des fichiers modifiés..."
+echo "🔍 Pre-commit: Checking staged files..."
 npm run lint-staged

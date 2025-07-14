@@ -1,18 +1,15 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+echo "🚀 Pre-push: Running full verification..."
 
-echo "🚀 Pre-push: Vérifications complètes..."
-
-echo "📝 1/4 - Vérification du formatage..."
+echo "📝 1/4 - Checking code formatting..."
 npm run format || exit 1
 
-echo "🔍 2/4 - Linting complet..."
+echo "🔍 2/4 - Running linter..."
 npm run lint || exit 1
 
-echo "🔧 3/4 - Vérification TypeScript..."
+echo "🔧 3/4 - TypeScript type checking..."
 npm run typecheck || exit 1
 
-echo "🏗️ 4/4 - Test de build..."
+echo "🏗️ 4/4 - Testing build..."
 npm run build || exit 1
 
-echo "✅ Toutes les vérifications passées! Push autorisé." 
+echo "✅ All checks passed! Push allowed."

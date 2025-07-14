@@ -1,23 +1,43 @@
-# Dependency directories
+# Dependencies
 node_modules/
+.npm
+.yarn/
+
+# Build outputs
+dist/
+build/
+
+# Generated files
 .prisma/
 
-# Optional npm cache directory
-.npm
-
-# vscode
-.vscode
-*.code-workspace
-
-# build
-dist
-
-# lock files
-yarn.lock
-
-# env
+# Environment files
 .env
 .env.local
+.env.development
+.env.production
+.env.test
+
+# IDE
+.vscode/
+*.code-workspace
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
+Thumbs.db
+*.log
+
+# Lock files (keep package-lock.json but ignore others)
+yarn.lock
+pnpm-lock.yaml
+
+# Testing
+coverage/
+.nyc_output
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock

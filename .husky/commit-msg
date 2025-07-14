@@ -1,26 +1,26 @@
-# Récupération du message de commit
+# Get commit message
 commit_message=$(cat "$1")
 
-echo "📝 Validation du message de commit..."
+echo "📝 Validating commit message..."
 
-# Vérifier que le message n'est pas vide
+# Check if message is not empty
 if [ -z "$commit_message" ]; then
-    echo "❌ Le message de commit ne peut pas être vide"
+    echo "❌ Commit message cannot be empty"
     exit 1
 fi
 
-# Vérifier la longueur minimale (au moins 10 caractères)
+# Check minimum length (at least 10 characters)
 if [ ${#commit_message} -lt 10 ]; then
-    echo "❌ Le message de commit doit faire au moins 10 caractères"
-    echo "Message actuel: '$commit_message' (${#commit_message} caractères)"
+    echo "❌ Commit message must be at least 10 characters long"
+    echo "Current message: '$commit_message' (${#commit_message} characters)"
     exit 1
 fi
 
-# Suggestions pour de bons messages (optionnel, avertissement seulement)
+# Suggestions for good commit messages (optional, warning only)
 if ! echo "$commit_message" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf)(\(.+\))?: .+"; then
-    echo "💡 Suggestion: Utilisez le format 'type: description'"
-    echo "   Exemples: feat: add user login, fix: resolve CORS issue"
+    echo "💡 Suggestion: Use the format 'type: description'"
+    echo "   Examples: feat: add user login, fix: resolve CORS issue"
     echo "   Types: feat, fix, docs, style, refactor, test, chore, perf"
 fi
 
-echo "✅ Message de commit valide: $commit_message" 
+echo "✅ Commit message is valid: $commit_message" 
