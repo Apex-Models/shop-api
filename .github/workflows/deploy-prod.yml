@@ -1,0 +1,44 @@
+name: Deploy PROD to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy to PROD
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Copy to EC2 PROD
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_PROD_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_PROD_SSH_KEY }}
+          port: ${{ secrets.EC2_PROD_PORT }}
+          source: "."
+          target: "/home/ec2-user/prod-api"
+
+      - name: Restart app on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_PROD_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_PROD_SSH_KEY }}
+          port: ${{ secrets.EC2_PROD_PORT }}
+          script: |
+            cd ~/prod-api
+            npm install --omit=dev
+            pm2 reload prod-api || pm2 start dist/app.js --name "prod-api"
