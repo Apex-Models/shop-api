@@ -25,24 +25,37 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Copy to EC2 DEV
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ env.EC2_DEV_HOST }}
-          username: ec2-user
-          key: ${{ env.EC2_DEV_SSH_KEY }}
-          port: ${{ env.EC2_DEV_PORT }}
-          source: "."
-          target: "/home/ec2-user/dev-api"
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ env.EC2_DEV_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.EC2_DEV_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Restart app on EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ env.EC2_DEV_HOST }}
-          username: ec2-user
-          key: ${{ env.EC2_DEV_SSH_KEY }}
-          port: ${{ env.EC2_DEV_PORT }}
-          script: |
+      - name: Copy to EC2 DEV
+        run: |
+          tar -czf deploy.tar.gz dist/ package*.json prisma/
+          scp -i ~/.ssh/id_rsa -P ${{ env.EC2_DEV_PORT }} deploy.tar.gz ec2-user@${{ env.EC2_DEV_HOST }}:/tmp/
+
+      - name: Deploy and restart app on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -p ${{ env.EC2_DEV_PORT }} ec2-user@${{ env.EC2_DEV_HOST }} << 'EOF'
+            # Create directory and extract
+            mkdir -p ~/dev-api
             cd ~/dev-api
-            npm install --omit=dev
-            pm2 reload dev-api || pm2 start dist/app.js --name "dev-api"
+            tar -xzf /tmp/deploy.tar.gz
+            
+            # Create .env file
+            cat > .env << 'ENVEOF'
+            NODE_ENV=development
+            PORT=${{ secrets.API_PORT_DEV }}
+            DATABASE_URL="${{ secrets.DATABASE_URL_DEV }}"
+            CORS_ORIGIN="${{ secrets.CORS_ORIGIN_DEV }}"
+            ENVEOF
+            
+            # Install dependencies and restart
+            npm ci --omit=dev
+            npx prisma generate
+            pm2 reload dev-api || pm2 start dist/app.js --name "dev-api" --env development
+            pm2 save
+          EOF
