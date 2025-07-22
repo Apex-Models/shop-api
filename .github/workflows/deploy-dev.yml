@@ -45,9 +45,17 @@ jobs:
             cd ~/dev-api
             tar -xzf /tmp/deploy.tar.gz
             
+            # Create .env file
+            cat > .env << 'ENVEOF'
+            NODE_ENV=development
+            PORT=${{ secrets.API_PORT_DEV }}
+            DATABASE_URL="${{ secrets.DATABASE_URL_DEV }}"
+            CORS_ORIGIN="${{ secrets.CORS_ORIGIN_DEV }}"
+            ENVEOF
+            
             # Install dependencies and restart
-            npm install --omit=dev
+            npm ci --omit=dev
             npx prisma generate
-            pm2 reload dev-api || pm2 start dist/app.js --name "dev-api"
+            pm2 reload dev-api || pm2 start dist/app.js --name "dev-api" --env development
             pm2 save
           EOF
