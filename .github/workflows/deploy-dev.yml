@@ -25,15 +25,6 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Debug EC2 connection info
-        run: |
-          echo "EC2_DEV_HOST: ${{ env.EC2_DEV_HOST }}"
-          echo "EC2_DEV_PORT: ${{ env.EC2_DEV_PORT }}"
-          # Test DNS resolution
-          nslookup ${{ env.EC2_DEV_HOST }} || echo "DNS lookup failed"
-          # Test connectivity
-          nc -zv ${{ env.EC2_DEV_HOST }} ${{ env.EC2_DEV_PORT }} || echo "Connection test failed"
-
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
