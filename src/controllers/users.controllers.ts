@@ -1,4 +1,4 @@
-const database = require('../lib/prisma');
+const prisma = require('../lib/prisma');
 
 exports.getUsers = async function (request: any, reply: any) {
   try {
@@ -69,16 +69,16 @@ exports.getUsers = async function (request: any, reply: any) {
     }
 
     // Récupération des utilisateurs
-    const [users] = await database.$transaction([
-      database.user.findMany(queryOptions),
-      database.user.count({ where }),
+    const [users] = await prisma.$transaction([
+      prisma.user.findMany(queryOptions),
+      prisma.user.count({ where }),
     ]);
 
     // Pour chaque utilisateur, calculer ses statistiques de commandes
     const usersWithStats = await Promise.all(
       users.map(async (user: any) => {
         // Récupérer les commandes de cet utilisateur via la relation
-        const userOrders = await database.order.findMany({
+        const userOrders = await prisma.order.findMany({
           where: { userId: user.id },
           select: {
             id: true,
@@ -170,10 +170,10 @@ exports.getUsers = async function (request: any, reply: any) {
     }
 
     // Calculer les statistiques globales
-    const allUsers = await database.user.findMany();
+    const allUsers = await prisma.user.findMany();
     const allUsersWithOrderStats = await Promise.all(
       allUsers.map(async (user: any) => {
-        const orders = await database.order.findMany({
+        const orders = await prisma.order.findMany({
           where: { userId: user.id },
           select: { total: true },
         });
@@ -254,7 +254,7 @@ exports.getUserById = async function (request: any, reply: any) {
   try {
     const { id } = request.query;
 
-    const user = await database.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: parseInt(id) },
     });
 
@@ -267,7 +267,7 @@ exports.getUserById = async function (request: any, reply: any) {
     }
 
     // Récupérer les commandes de cet utilisateur
-    const userOrders = await database.order.findMany({
+    const userOrders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
         items: {
@@ -351,7 +351,7 @@ exports.deleteUsers = async function (request: any, reply: any) {
     }
 
     // Vérification de l'existence des utilisateurs avant suppression
-    const existingUsers = await database.user.findMany({
+    const existingUsers = await prisma.user.findMany({
       where: { id: { in: validIds } },
       select: { id: true, firstName: true, lastName: true, email: true },
     });
@@ -368,7 +368,7 @@ exports.deleteUsers = async function (request: any, reply: any) {
     const notFoundIds = validIds.filter(id => !existingIds.includes(id));
 
     // Suppression des utilisateurs
-    const deleteResult = await database.user.deleteMany({
+    const deleteResult = await prisma.user.deleteMany({
       where: { id: { in: existingIds } },
     });
 

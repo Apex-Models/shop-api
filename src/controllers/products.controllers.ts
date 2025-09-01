@@ -1,5 +1,5 @@
 const axios = require('axios');
-const prisma = require('../lib/prisma');
+const prismaClient = require('../lib/prisma');
 
 exports.createProduct = async function (request: any, reply: any) {
   try {
@@ -59,7 +59,7 @@ exports.createProduct = async function (request: any, reply: any) {
 
     // Créer le produit dans la base de données
     console.log('💾 Création du produit en base de données...');
-    const product = await prisma.product.create({
+    const product = await prismaClient.product.create({
       data: {
         name,
         description,
@@ -159,10 +159,10 @@ exports.getProducts = async function (request: any, reply: any) {
     }
 
     // Récupération via une transaction pour limiter les aller-retours DB
-    const [products, matchedCount, statusCounts] = await prisma.$transaction([
-      prisma.product.findMany(queryOptions),
-      prisma.product.count({ where }),
-      prisma.product.groupBy({
+    const [products, matchedCount, statusCounts] = await prismaClient.$transaction([
+      prismaClient.product.findMany(queryOptions),
+      prismaClient.product.count({ where }),
+      prismaClient.product.groupBy({
         by: ['status'],
         _count: { _all: true },
       }),
@@ -230,7 +230,7 @@ exports.getProductById = async function (request: any, reply: any) {
   try {
     const { id } = request.query;
 
-    const product = await prisma.product.findUnique({
+    const product = await prismaClient.product.findUnique({
       where: { id: parseInt(id) },
     });
 
@@ -282,7 +282,7 @@ exports.deleteProducts = async function (request: any, reply: any) {
     }
 
     // Vérification de l'existence des produits avant suppression
-    const existingProducts = await prisma.product.findMany({
+    const existingProducts = await prismaClient.product.findMany({
       where: { id: { in: validIds } },
       select: { id: true, name: true },
     });
@@ -299,7 +299,7 @@ exports.deleteProducts = async function (request: any, reply: any) {
     const notFoundIds = validIds.filter(id => !existingIds.includes(id));
 
     // Suppression des produits
-    const deleteResult = await prisma.product.deleteMany({
+    const deleteResult = await prismaClient.product.deleteMany({
       where: { id: { in: existingIds } },
     });
 
