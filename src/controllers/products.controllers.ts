@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
 const axios = require('axios');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 exports.createProduct = async function (request: any, reply: any) {
   try {
@@ -98,111 +97,131 @@ exports.createProduct = async function (request: any, reply: any) {
   }
 };
 
-exports.getAllProducts = async function (_request: any, reply: any) {
+exports.getProducts = async function (request: any, reply: any) {
   try {
-    const products = await prisma.product.findMany();
-    reply.status(200).send({
+    // S'assurer que request.body existe, même s'il est vide
+    const body = request.body || {};
+
+    const { filter = {}, sort = {}, page = 1, limit = null, status = 'active' } = body;
+
+    // Configuration du tri avec valeurs par défaut
+    const { sortOrder = 'desc', sortBy = 'createdAt' } = sort;
+
+    // Construction du where clause
+    const where: any = {};
+
+    // Filtrage par status (paramètre direct ou dans filter)
+    const productStatus = filter.status || status;
+    if (productStatus) {
+      where.status = { equals: productStatus, mode: 'insensitive' };
+    }
+
+    // Application des filtres
+    if (filter.minPrice || filter.maxPrice) {
+      where.price = {};
+      if (filter.minPrice) {
+        where.price.gte = parseFloat(filter.minPrice);
+      }
+      if (filter.maxPrice) {
+        where.price.lte = parseFloat(filter.maxPrice);
+      }
+    }
+
+    if (filter.type) {
+      where.type = { equals: filter.type, mode: 'insensitive' };
+    }
+
+    if (filter.category && Array.isArray(filter.category) && filter.category.length > 0) {
+      where.category = { hasSome: filter.category };
+    }
+
+    // Configuration de la pagination
+    const currentPage = page ? parseInt(page) : 1;
+    const itemsPerPage = limit ? parseInt(limit) : null;
+    const skip = itemsPerPage ? (currentPage - 1) * itemsPerPage : 0;
+
+    // Validation du tri
+    const allowedSortFields = ['name', 'price', 'status', 'type', 'createdAt', 'updatedAt'];
+    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const validSortOrder = ['asc', 'desc'].includes(sortOrder) ? sortOrder : 'desc';
+    const orderBy = { [validSortBy]: validSortOrder };
+
+    // Construction de la requête
+    const queryOptions: any = {
+      where,
+      orderBy,
+    };
+
+    // Ajout de la pagination si limit est spécifié
+    if (itemsPerPage) {
+      queryOptions.skip = skip;
+      queryOptions.take = itemsPerPage;
+    }
+
+    // Récupération via une transaction pour limiter les aller-retours DB
+    const [products, matchedCount, statusCounts] = await prisma.$transaction([
+      prisma.product.findMany(queryOptions),
+      prisma.product.count({ where }),
+      prisma.product.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+    ]);
+
+    // Agrégation des compteurs globaux
+    const totalsByStatus: Record<string, number> = Object.create(null);
+    for (const row of statusCounts as Array<{ status: string; _count: { _all: number } }>) {
+      totalsByStatus[row.status] = row._count._all;
+    }
+    const totalActiveProducts = totalsByStatus['active'] || 0;
+    const totalInactiveProducts = totalsByStatus['inactive'] || 0;
+    const totalProducts = Object.values(totalsByStatus).reduce((acc, n) => acc + n, 0);
+
+    // Calcul des métadonnées de pagination
+    const response: any = {
       success: true,
       message: 'Products retrieved successfully',
       data: products,
-    });
+      totalMatchedProducts: matchedCount,
+      counts: { totalProducts, totalActiveProducts, totalInactiveProducts },
+      appliedFilters: {
+        filter,
+        sort: { sortBy: validSortBy, sortOrder: validSortOrder },
+        status: productStatus,
+      },
+    };
+
+    // Ajout des métadonnées de pagination si limit est spécifié
+    if (itemsPerPage) {
+      const totalPages = Math.ceil(matchedCount / itemsPerPage);
+      const hasNextPage = currentPage < totalPages;
+      const hasPrevPage = currentPage > 1;
+
+      response.pagination = {
+        currentPage,
+        totalPages,
+        limit: itemsPerPage,
+        hasNextPage,
+        hasPrevPage,
+      };
+    } else {
+      response.pagination = {
+        currentPage: 1,
+        totalPages: 1,
+        limit: 'all',
+        hasNextPage: false,
+        hasPrevPage: false,
+      };
+    }
+
+    reply.status(200).send(response);
   } catch (error: any) {
     console.error(error);
     reply.status(400).send({
       success: false,
       message: 'Error retrieving products',
       data: null,
-    });
-  }
-};
-
-exports.getProductsWithFilters = async function (request: any, reply: any) {
-  try {
-    const { page = 1, sortBy = 'createdAt', sortOrder = 'desc', filters = {} } = request.body;
-
-    const limit = 12;
-    const where: any = {};
-    const hasFilters = filters && Object.keys(filters).length > 0;
-
-    if (hasFilters) {
-      if (filters.search) {
-        where.OR = [
-          { name: { contains: filters.search, mode: 'insensitive' } },
-          { description: { contains: filters.search, mode: 'insensitive' } },
-        ];
-      }
-
-      if (filters.category) {
-        where.category = { has: filters.category };
-      }
-
-      if (filters.type) {
-        where.type = { equals: filters.type, mode: 'insensitive' };
-      }
-
-      if (filters.minPrice || filters.maxPrice) {
-        where.price = {};
-        if (filters.minPrice) {
-          where.price.gte = parseFloat(filters.minPrice);
-        }
-        if (filters.maxPrice) {
-          where.price.lte = parseFloat(filters.maxPrice);
-        }
-      }
-    }
-
-    // Calcul de la pagination
-    const skip = (parseInt(page) - 1) * limit;
-
-    // Validation du tri
-    const allowedSortFields = ['name', 'price', 'createdAt', 'updatedAt'];
-    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
-    const orderBy = { [sortField]: sortOrder === 'asc' ? 'asc' : 'desc' };
-
-    // Récupération des produits avec pagination
-    const [products, totalCount] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-      }),
-      prisma.product.count({ where }),
-    ]);
-
-    // Calcul des métadonnées de pagination
-    const totalPages = Math.ceil(totalCount / limit);
-    const currentPage = parseInt(page);
-    const hasNextPage = currentPage < totalPages;
-    const hasPrevPage = currentPage > 1;
-
-    reply.status(200).send({
-      success: true,
-      message: hasFilters
-        ? 'Products retrieved successfully with filters'
-        : 'All products retrieved successfully',
-      data: products,
-      pagination: {
-        currentPage,
-        totalPages,
-        totalCount,
-        limit,
-        hasNextPage,
-        hasPrevPage,
-      },
-      appliedFilters: hasFilters ? filters : null,
-      filtersApplied: hasFilters,
-      sorting: {
-        sortBy: sortField,
-        sortOrder,
-      },
-    });
-  } catch (error: any) {
-    console.error(error);
-    reply.status(400).send({
-      success: false,
-      message: 'Error retrieving products with filters',
-      data: null,
+      error: error.message,
     });
   }
 };
@@ -234,6 +253,84 @@ exports.getProductById = async function (request: any, reply: any) {
       success: false,
       message: 'Error retrieving product',
       data: null,
+    });
+  }
+};
+
+exports.deleteProducts = async function (request: any, reply: any) {
+  try {
+    const { productIds } = request.body;
+
+    // Validation des données requises
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Le champ productIds est requis et doit être un tableau non vide',
+        data: null,
+      });
+    }
+
+    // Vérification que tous les IDs sont des nombres valides
+    const validIds = productIds.filter(id => !isNaN(parseInt(id))).map(id => parseInt(id));
+
+    if (validIds.length !== productIds.length) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Tous les IDs de produits doivent être des nombres valides',
+        data: null,
+      });
+    }
+
+    // Vérification de l'existence des produits avant suppression
+    const existingProducts = await prisma.product.findMany({
+      where: { id: { in: validIds } },
+      select: { id: true, name: true },
+    });
+
+    if (existingProducts.length === 0) {
+      return reply.status(404).send({
+        success: false,
+        message: 'Aucun produit trouvé avec les IDs fournis',
+        data: null,
+      });
+    }
+
+    const existingIds = existingProducts.map((p: { id: number; name: string }) => p.id);
+    const notFoundIds = validIds.filter(id => !existingIds.includes(id));
+
+    // Suppression des produits
+    const deleteResult = await prisma.product.deleteMany({
+      where: { id: { in: existingIds } },
+    });
+
+    console.log(`✅ ${deleteResult.count} produit(s) supprimé(s) avec succès`);
+
+    const responseMessage =
+      deleteResult.count === validIds.length
+        ? `${deleteResult.count} produit(s) supprimé(s) avec succès`
+        : `${deleteResult.count} produit(s) supprimé(s) avec succès. ${notFoundIds.length} produit(s) non trouvé(s): ${notFoundIds.join(', ')}`;
+
+    reply.status(200).send({
+      success: true,
+      message: responseMessage,
+      data: {
+        deletedCount: deleteResult.count,
+        deletedProducts: existingProducts.filter((p: { id: number; name: string }) =>
+          existingIds.includes(p.id)
+        ),
+        notFoundIds,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erreur lors de la suppression des produits:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    reply.status(500).send({
+      success: false,
+      message: 'Erreur lors de la suppression des produits',
+      data: null,
+      error: error.message,
     });
   }
 };

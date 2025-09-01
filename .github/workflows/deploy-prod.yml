@@ -54,7 +54,7 @@ jobs:
             ENVEOF
             
             # Install dependencies and restart
-            npm ci --omit=dev
+            npm ci --omit=dev --ignore-scripts
             npx prisma generate
             pm2 delete prod-api || true
             pm2 start dist/app.js --name "prod-api"
