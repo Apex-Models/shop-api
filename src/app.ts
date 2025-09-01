@@ -22,7 +22,7 @@ fastify.register(cors, {
 });
 
 // app routes
-fastify.register(routes, { prefix: 'api/' });
+fastify.register(routes, { prefix: '/api' });
 
 // Run the server
 fastify.listen(
