@@ -11,7 +11,18 @@ require('dotenv').config();
 // CORS
 fastify.register(cors, {
   origin: (origin: string | undefined, cb: (error: Error | null, success: boolean) => void) => {
-    if (!origin || origin === `${process.env.CORS_ORIGIN}`) {
+    // Récupérer les origines autorisées depuis les variables d'environnement
+    const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [];
+
+    // Vérifier si l'origine est autorisée (exacte ou commence par une origine autorisée)
+    const isAllowed =
+      !origin ||
+      corsOrigins.some(
+        allowedOrigin =>
+          origin === allowedOrigin.trim() || origin.startsWith(allowedOrigin.trim() + '/')
+      );
+
+    if (isAllowed) {
       cb(null, true);
     } else {
       cb(new Error('Not allowed by CORS'), false);
